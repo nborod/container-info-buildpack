@@ -6,7 +6,7 @@
 # Requires http://aws.amazon.com/cli/ to be installed & configured 
 # Requires the S3 buckect to already be created - ie, aws s3 ls s3://dest-bucket-name should work
 
-OPENRESTY_VERSION="1.2.8.6"
+OPENRESTY_VERSION="1.7.7.1"
 
 base_dir=$(pwd)
 

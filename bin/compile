@@ -9,7 +9,7 @@ set -e
 #set -x
 
 # config
-OPENRESTY_VERSION="1.2.8.6"
+OPENRESTY_VERSION="1.7.7.1"
 
 # parse and derive params
 BUILD_DIR=$1
@@ -39,7 +39,7 @@ OPENRESTY_URL="http://ci-labs-buildpack-downloads.s3.amazonaws.com/openresty/ope
 # vendor directories
 VENDORED_OPENRESTY="${BUILD_DIR}/vendor/openresty"
 VENDORED_FOREGO="${BUILD_DIR}/vendor/bin/forego"
-VENDORED_GEMS="${BUILD_DIR}/vendor/gems"
+#VENDORED_GEMS="${BUILD_DIR}/vendor/gems"
 
 # CF Common
 BUILDPACK_PATH=$COMPILE_BUILDPACK_DIR
@@ -67,28 +67,33 @@ pushd ${VENDORED_OPENRESTY}/luajit/lib > /dev/null
 ln -s libluajit-5.1.so.2.0.2 libluajit-5.1.so.2
 ln -s libluajit-5.1.so.2.0.2 libluajit-5.1.so
 popd > /dev/null
-if [ ! -f "${BUILD_DIR}/.htpasswd" ]; then
-    cp ${BUILDPACK_PATH}/config/.htpasswd ${BUILD_DIR}
-fi
+#if [ ! -f "${BUILD_DIR}/.htpasswd" ]; then
+#    cp ${BUILDPACK_PATH}/config/.htpasswd ${BUILD_DIR}
+#fi
 
 
 mkdir -p ${BUILD_DIR}/config
 cp $COMPILE_BUILDPACK_DIR/config/nginx.conf.erb ${BUILD_DIR}/config 
+
+mkdir -p ${BUILD_DIR}/lua
+cp $COMPILE_BUILDPACK_DIR/config/*lua ${BUILD_DIR}/lua
+cp $COMPILE_BUILDPACK_DIR/config/adobe_utils.lua ${VENDORED_OPENRESTY}/lualib
+
 echo "export PATH=\"\$HOME/vendor/openresty/nginx/sbin:\$PATH\"" > $BUILD_DIR/.profile.d/openresty_env.sh
 echo "export LD_LIBRARY_PATH=\"\$HOME/vendor/openresty/luajit/lib:\$LD_LIBRARY_PATH\"" >> $BUILD_DIR/.profile.d/openresty_env.sh
 echo "export LUAJIT_LIB=\"\$HOME/vendor/openresty/luajit/lib\"" >> $BUILD_DIR/.profile.d/openresty_env.sh
 echo "export LUAJIT_INC=\"\$HOME/vendor/openresty/luajit/include/luajit-2.0\"" >> $BUILD_DIR/.profile.d/openresty_env.sh
 
-echo "Installing Ohai" | indent
-mkdir $VENDORED_GEMS
-GEM_HOME=$VENDORED_GEMS gem install ohai --no-ri --no-rdoc | indent | indent
-echo "export PATH=\"\$HOME/vendor/gems/bin:\$PATH\"" > $BUILD_DIR/.profile.d/gems.sh
-echo "export GEM_HOME=\"\$HOME/vendor/gems\"" >> $BUILD_DIR/.profile.d/gems.sh
-echo "export GEM_PATH=\"\$HOME/vendor/gems:\$GEM_PATH\"" >> $BUILD_DIR/.profile.d/gems.sh
+#echo "Installing Ohai" | indent
+#mkdir $VENDORED_GEMS
+#GEM_HOME=$VENDORED_GEMS gem install ohai --no-ri --no-rdoc | indent | indent
+#echo "export PATH=\"\$HOME/vendor/gems/bin:\$PATH\"" > $BUILD_DIR/.profile.d/gems.sh
+#echo "export GEM_HOME=\"\$HOME/vendor/gems\"" >> $BUILD_DIR/.profile.d/gems.sh
+#echo "export GEM_PATH=\"\$HOME/vendor/gems:\$GEM_PATH\"" >> $BUILD_DIR/.profile.d/gems.sh
 
-echo "Installing web-ui" | indent
-mkdir -p ${BUILD_DIR}/public | indent
-cp -R $COMPILE_BUILDPACK_DIR/src/web-ui/dist/* ${BUILD_DIR}/public
+#echo "Installing web-ui" | indent
+#mkdir -p ${BUILD_DIR}/public | indent
+#cp -R $COMPILE_BUILDPACK_DIR/src/web-ui/dist/* ${BUILD_DIR}/public
 
 echo "Installing buildpack-runner" | indent
 mkdir -p ${BUILD_DIR}/buildpack-runner | indent

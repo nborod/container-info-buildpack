@@ -1,70 +1,95 @@
-worker_processes 1;
-daemon off;
+## NEED CHANGE (defines the user of the nginx workers)
+# user user group;
 
-error_log stderr;
-events { worker_connections 1024; }
+## THIS PARAMETERS BE SAFELY OVER RIDDEN BY YOUR DEFAULT NGINX CONF
+worker_processes  2;
+# error_log stderr notice;
+# daemon off;
+# error_log logs/error.log warn;
+events {
+  worker_connections 256;
+}
 
 http {
-  log_format cloudfoundry '$http_x_forwarded_for - $http_referer - [$time_local] "$request" $status $body_bytes_sent';
-  access_log <%= ENV["HOME"] %>/../logs/access.log cloudfoundry;
-  
-  default_type text/plain;
+  lua_shared_dict api_keys 10m;
+  lua_package_path ";;$prefix/?.lua;";
+  init_by_lua 'math.randomseed(ngx.time())';
 
-  include /app/vendor/openresty/nginx/conf/mime.types;
+  upstream api_backend {
+    server oauth2api.paas-dev.corp.adobe.com:443 max_fails=5 fail_timeout=30;
+  }
 
-  sendfile on;
-  gzip on;
-  tcp_nopush on;
-  keepalive_timeout 30;
+  upstream backend {
+    server 192.168.5.8:80;
+  }
+
+  upstream nfs_api {
+    server 10.5.250.38:8188;
+  }
 
   server {
-    listen <%= ENV["PORT"] %>;
-    server_name localhost;
+    #lua_shared_dict api_keys 10m;
+    lua_code_cache off;
+    listen <%= ENV["PORT"] %>
+    ## CHANGE YOUR SERVER_NAME TO YOUR CUSTOM DOMAIN OR LEAVE IT BLANK IF ONLY HAVE ONE
+    #server_name CHANGE_ME_SERVER_NAME;
+    underscores_in_headers on;
+
+    location ~ /_adobe/(.*)\.json$ {
+      proxy_set_header  X-Real-IP  $remote_addr;
+      proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header  Host $http_host;
+      #set $provider_key wxyz;
+      proxy_pass http://backend/$1.json ;
+    }
+
+    location ~ /_service/nfs/(.*) {
+      #internal;
+      #proxy_set_header  X-Real-IP  $remote_addr;
+      proxy_set_header  Content-Type "application/x-www-form-urlencoded";
+      proxy_redirect off;
+      proxy_max_temp_file_size 0;
+      proxy_pass http://10.5.250.38:8188/$1;
+    }
+
+    location = /_oauth/check_token {
+      internal;
+      proxy_set_header  Content-Type "application/x-www-form-urlencoded";
+      proxy_redirect off;
+      proxy_max_temp_file_size 0;
+      proxy_pass https://oauth2api-dev.paas.corp.adobe.com/check_token;
+    }
+
+    location /oauth/token  {
+      set $hash_key "c2d6b2a9fe01617ac30d4c03296312cf";
+      proxy_set_header  X-Real-IP  $remote_addr;
+      proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header  Host $http_host;
+      proxy_set_header  Content-Type "application/x-www-form-urlencoded";
+      content_by_lua_file <%= ENV["HOME"] %>/lua/get_token.lua ;
+    }
+
+    location = /_oauth/token {
+      internal;
+      #proxy_set_header X-Real-IP $remote_addr;
+      #proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header  Content-Type "application/x-www-form-urlencoded";
+      proxy_redirect off;
+      proxy_max_temp_file_size 0;
+      proxy_pass https://oauth2api-dev.paas.corp.adobe.com/oauth/token;
+    }
 
     location / {
-       root <%= ENV["HOME"] %>/public;
-       auth_basic "Restricted";
-       auth_basic_user_file <%= ENV["HOME"] %>/.htpasswd;
+      set $proxy_pass null;
+
+      proxy_ignore_client_abort on;
+
+      ## CHANGE THE PATH TO POINT TO THE RIGHT FILE ON YOUR FILESYSTEM
+      access_by_lua_file <%= ENV["HOME"] %>/lua/nginx.lua;
+
+      proxy_pass $proxy_pass ;
+      proxy_set_header  X-Real-IP  $remote_addr;
+      proxy_set_header  Host  $host;
     }
-
-    location /root/ {
-      alias /;
-      autoindex on;
-      auth_basic "Restricted";
-      auth_basic_user_file <%= ENV["HOME"] %>/.htpasswd;
-    }
-
-    location /exec { 
-      set_unescape_uri $cmd $arg_cmd;
-      auth_basic "Restricted";
-      auth_basic_user_file <%= ENV["HOME"] %>/.htpasswd;
-      content_by_lua '
-          local cmd = ngx.var["cmd"]
-          ngx.print("command: ", cmd, "\\n")
-
-          local handle = io.popen(cmd .. " 2>&1")
-          local result = handle:read("*a")
-          ngx.say("result:")
-          ngx.say(result)
-          handle:close()
-      ';
-    }
-    location /execStaging {
-      set_unescape_uri $buildpackUrl $arg_buildpackUrl;
-      auth_basic "Restricted";
-      auth_basic_user_file <%= ENV["HOME"] %>/.htpasswd;
-      content_by_lua '
-          local buildpackUrl = ngx.var["buildpackUrl"]
-          ngx.print("command: ", buildpackUrl, "\\n")
-
-          local handle = io.popen("buildpack-runner/stage_buildpack " .. buildpackUrl .. " 2>&1")
-          local result = handle:read("*a")
-          ngx.say("result:")
-          ngx.say(result)
-          handle:close()
-      ';
-    }
-
-
   }
 }
