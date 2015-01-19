@@ -2,8 +2,8 @@
 # user user group;
 
 ## THIS PARAMETERS BE SAFELY OVER RIDDEN BY YOUR DEFAULT NGINX CONF
-worker_processes  2;
-# error_log stderr notice;
+worker_processes  1;
+error_log stderr debug;
 # daemon off;
 # error_log logs/error.log warn;
 events {
@@ -11,6 +11,10 @@ events {
 }
 
 http {
+  log_format cloudfoundry '$http_x_forwarded_for - $http_referer - [$time_local] "$request" $status $body_bytes_sent';
+  access_log <%= ENV["HOME"] %>/../logs/access.log cloudfoundry;
+  error_log <%= ENV["HOME"] %>/../logs/error.log;
+
   lua_shared_dict api_keys 10m;
   lua_package_path ";;$prefix/?.lua;";
   init_by_lua 'math.randomseed(ngx.time())';
@@ -30,10 +34,10 @@ http {
   server {
     #lua_shared_dict api_keys 10m;
     lua_code_cache off;
-    listen <%= ENV["PORT"] %>
+    listen <%= ENV["PORT"] %>;
     ## CHANGE YOUR SERVER_NAME TO YOUR CUSTOM DOMAIN OR LEAVE IT BLANK IF ONLY HAVE ONE
     #server_name CHANGE_ME_SERVER_NAME;
-    underscores_in_headers on;
+    #underscores_in_headers on;
 
     location ~ /_adobe/(.*)\.json$ {
       proxy_set_header  X-Real-IP  $remote_addr;

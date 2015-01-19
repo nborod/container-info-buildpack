@@ -4,8 +4,8 @@ language='container-info'
 
 dependencies=(
   'https://godist.herokuapp.com/projects/ddollar/forego/releases/current/linux-amd64/forego'
-  'http://ci-labs-buildpack-downloads.s3.amazonaws.com/openresty/openresty-1.2.8.6.tar.gz'
 )
+#  'http://ci-labs-buildpack-downloads.s3.amazonaws.com/openresty/openresty-1.2.8.6.tar.gz'
 
 excluded_files=(
   '.git/'
