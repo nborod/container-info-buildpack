@@ -4,7 +4,10 @@ local redis = require 'resty.redis'
 local red = redis:new()
 
 local function store_token(access_token, value, expires_in)
-  adobe.connect_redis(red)
+  if not adobe.connect_redis(red) then 
+     return
+  end
+
   local key = ngx.hmac_sha1(ngx.var.hash_key, access_token)
   res, err = red:set(key, value)
   if not res then
@@ -154,3 +157,5 @@ if headers["X-Adobe-Token"] ~= nil then
 else
   local s = generate_token(params)
 end
+
+adobe.log("End of get_token script")

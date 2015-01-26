@@ -76,36 +76,26 @@ wget -q $OPENRESTY_URL
 wget -q http://softlayer-dal.dl.sourceforge.net/project/pcre/pcre/8.36/pcre-8.36.tar.gz
 ls -la
 
-echo"---> Building PCRE" | indent
+echo "---> Building PCRE" | indent
 tar xzf pcre-8.36.tar.gz
 cd pcre-8.36
 ./configure
-echo"---> making PCRE" | indent
+echo "---> making PCRE" | indent
 make
 cd ..
 
-echo"---> Building Openresty" | indent
+echo "---> Building Openresty" | indent
 tar xzf ngx_openresty-$OPENRESTY_VERSION.tar.gz
 cd ngx_openresty-$OPENRESTY_VERSION
 ./configure --prefix=/app/vendor/openresty --with-luajit --with-pcre=../pcre-8.36
-echo"---> making Openresty" | indent
+echo "---> making Openresty" | indent
 make
-echo"---> installing Openresty" | indent
+echo "---> installing Openresty" | indent
 env
 make install DESTDIR=/tmp/staged
 cd ..
 
 popd
-
-#package_download "${OPENRESTY_URL}" "${VENDORED_OPENRESTY}"
-#echo "Fixing luajit/lib symlinks..." | indent | indent
-#pushd ${VENDORED_OPENRESTY}/luajit/lib > /dev/null
-#ln -s libluajit-5.1.so.2.0.2 libluajit-5.1.so.2
-#ln -s libluajit-5.1.so.2.0.2 libluajit-5.1.so
-#popd > /dev/null
-#if [ ! -f "${BUILD_DIR}/.htpasswd" ]; then
-#    cp ${BUILDPACK_PATH}/config/.htpasswd ${BUILD_DIR}
-#fi
 
 mkdir -p ${BUILD_DIR}/config
 cp $COMPILE_BUILDPACK_DIR/config/nginx.conf.erb ${BUILD_DIR}/config 
@@ -118,17 +108,6 @@ echo "export PATH=\"\$HOME/vendor/openresty/nginx/sbin:\$PATH\"" > $BUILD_DIR/.p
 echo "export LD_LIBRARY_PATH=\"\$HOME/vendor/openresty/luajit/lib:\$LD_LIBRARY_PATH\"" >> $BUILD_DIR/.profile.d/openresty_env.sh
 echo "export LUAJIT_LIB=\"\$HOME/vendor/openresty/luajit/lib\"" >> $BUILD_DIR/.profile.d/openresty_env.sh
 echo "export LUAJIT_INC=\"\$HOME/vendor/openresty/luajit/include/luajit-2.0\"" >> $BUILD_DIR/.profile.d/openresty_env.sh
-
-#echo "Installing Ohai" | indent
-#mkdir $VENDORED_GEMS
-#GEM_HOME=$VENDORED_GEMS gem install ohai --no-ri --no-rdoc | indent | indent
-#echo "export PATH=\"\$HOME/vendor/gems/bin:\$PATH\"" > $BUILD_DIR/.profile.d/gems.sh
-#echo "export GEM_HOME=\"\$HOME/vendor/gems\"" >> $BUILD_DIR/.profile.d/gems.sh
-#echo "export GEM_PATH=\"\$HOME/vendor/gems:\$GEM_PATH\"" >> $BUILD_DIR/.profile.d/gems.sh
-
-#echo "Installing web-ui" | indent
-#mkdir -p ${BUILD_DIR}/public | indent
-#cp -R $COMPILE_BUILDPACK_DIR/src/web-ui/dist/* ${BUILD_DIR}/public
 
 echo "Installing buildpack-runner" | indent
 mkdir -p ${BUILD_DIR}/buildpack-runner | indent

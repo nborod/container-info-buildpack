@@ -32,7 +32,7 @@ function M.log(content)
   else
      M.log_message(content)
   end
-  M.newline()
+--  M.newline()
 end
 
 -- End Logging Helpers
@@ -82,11 +82,28 @@ function M.required_params_present(f_req, actual)
    return true
 end
 
+function M.get_redis_params()
+   local cjson = require "cjson"   
+   local host = "127.0.0.1"
+   local port = 6379
+
+   local env_string = os.getenv("VCAP_SERVICES")
+
+   if env_string then
+      local params = cjson.decode(env_string)
+      host = params["user-provided"][1].credentials.host
+      port = params["user-provided"][1].credentials.port
+      ngx.log(0,"redis host: "..host..":"..port)
+   end
+   return host, port
+end
+
 function M.connect_redis(red)
-   local ok, err = red:connect("127.0.0.1", 6379)
+   ngx.log(0, "Connecting to redis...")
+   local ok, err = red:connect(M.get_redis_params())
+
    if not ok then
-      ngx.say("failed to connect: ", err)
-      ngx.exit(ngx.HTTP_OK)
+      ngx.log(0, "failed to connect: "..err)
    end
    return ok, err
 end
